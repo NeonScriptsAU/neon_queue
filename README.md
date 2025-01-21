@@ -1,4 +1,4 @@
-![GitHub all releases](https://img.shields.io/github/downloads/NeonScriptsAU/neon_scoreboard/total?color=blue&style=flat-square)
+![GitHub all releases](https://img.shields.io/github/downloads/NeonScriptsAU/neon_queue/total?color=blue&style=flat-square)
 
 Hi, thank you for Using Neon Queue System! 😊
 
