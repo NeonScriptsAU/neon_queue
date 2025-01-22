@@ -108,7 +108,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
         playerRank = playerRank or {power = math.huge, reserved = false}
         print(string.format("^3Player Attempting to Connect: %s | Discord Rank: %s^7", name, playerRank.id or "Unranked"))
 
-        if player.rank.reserved then
+        if playerRank.reserved then
             table.insert(Queue, 1, {
                 source = src,
                 name = name,
@@ -121,7 +121,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
             UpdateQueuePositions()
             CheckQueue()
             return
-        end
+        end        
 
         if GracePlayers[discordID] then
             table.insert(Queue, 1, {
