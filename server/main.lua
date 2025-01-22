@@ -51,6 +51,12 @@ local function FormatWaitTime(startTime)
     return minutes, seconds
 end
 
+local function GetPlayerDiscordIdentifier(source)
+    local identifer = GetPlayerIdentifierByType(source,  "discord")
+    
+    return identifer and identifer:gsub("discord:", "")
+end
+
 CreateThread(function()
     while true do
         UpdateQueuePositions()
@@ -89,15 +95,8 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     deferrals.update("Checking server slots...")
 
     PlayerCount = GetNumPlayerIndices()
-    local sv_maxclients = GetConvarInt('sv_maxclients', Config.MaxSlots)
 
-    local discordID = nil
-    for _, id in ipairs(GetPlayerIdentifiers(src)) do
-        if string.find(id, "discord:") then
-            discordID = string.sub(id, 9)
-            break
-        end
-    end
+    local discordID = GetPlayerDiscordIdentifier(src)
 
     if not discordID then
         deferrals.done("❌ You must have Discord linked to join this server.")
@@ -171,15 +170,8 @@ end)
 
 AddEventHandler('playerDropped', function(reason)
     local src = source
-    local discordID = nil
-
-    for _, id in ipairs(GetPlayerIdentifiers(src)) do
-        if string.find(id, "discord:") then
-            discordID = string.sub(id, 9)
-            break
-        end
-    end
-
+    local discordID = GetPlayerDiscordIdentifier(src)
+    
     if discordID then
         GracePlayers[discordID] = GetGameTimer() + Config.GracePeriod
         print(string.format("^1Player Disconnected: Discord ID: %s | Grace Period Started.^7", discordID))
