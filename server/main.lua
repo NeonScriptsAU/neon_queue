@@ -5,6 +5,7 @@ local GracePlayers = {}
 local ReservedSlotsUsed = 0
 local MinimumQueueWait = 3000
 local IsProcessingQueue = false
+local sv_maxclients = GetConvarInt('sv_maxclients', Config.MaxSlots)
 
 local function CheckQueue()
     if IsProcessingQueue or #Queue == 0 then return end
