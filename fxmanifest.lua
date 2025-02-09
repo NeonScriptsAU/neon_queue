@@ -4,7 +4,7 @@ lua54 'yes'
 
 author 'Neon Scripts'
 description 'Queue System'
-version '1.0.0'
+version '1.0.1'
 
 shared_scripts { 
 	'config.lua'
