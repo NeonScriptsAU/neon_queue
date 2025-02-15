@@ -6,8 +6,9 @@ local ReservedSlotsUsed = 0
 local MinimumQueueWait = 3000
 local IsProcessingQueue = false
 local lastQueueUpdateTime = 0
+local LastQueueMessages = {}
 
-local function RemoveFromQueue(src)
+function RemoveFromQueue(src)
     for i = #Queue, 1, -1 do
         if Queue[i].source == src then
             print(string.format("^1Removing Player from Queue: %s | Position: %d/%d^7", Queue[i].name, i, #Queue))
@@ -20,7 +21,7 @@ local function RemoveFromQueue(src)
     return false
 end
 
-local function CheckQueue()
+function CheckQueue()
     if IsProcessingQueue or #Queue == 0 then return end
     IsProcessingQueue = true
 
