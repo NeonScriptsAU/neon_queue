@@ -13,7 +13,6 @@ if currentName == resourceName .. '-main' then
     end)
 end
 
--- Version checker
 local function checkVersion()
     if not currentVersion then
         print("^1[Error]: Unable to determine the current version of the resource '^3" .. resourceName .. "^1'.^0")
@@ -35,7 +34,6 @@ local function checkVersion()
     end)
 end
 
--- Amazing scripts appreciation
 local function showAmazingMessage()
     SetTimeout(1500, function()
         print(' ')
@@ -50,7 +48,6 @@ local function showAmazingMessage()
     end)
 end
 
--- Check and execute based on Config values
 if Config.VersionChecker then
     checkVersion()
 end

@@ -6,9 +6,6 @@ Config.VersionChecker = true
 -- Maximum number of players allowed before queueing starts
 Config.MaxSlots = 1
 
--- Number of reserved slots for high-priority players
-Config.ReservedSlots = 10
-
 -- Queue message shown to players
 Config.QueueMessage = "⏳ You are %d/%d in the queue | Time waited: %dm %02ds"
 

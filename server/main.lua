@@ -2,10 +2,10 @@ local Config = Config or {}
 Queue = Queue or {}
 PlayerCount = PlayerCount or 0
 local GracePlayers = {}
-local ReservedSlotsUsed = 0
 local MinimumQueueWait = 3000
 local IsProcessingQueue = false
-local lastQueueUpdateTime = 0
+local LastQueueWarnings = {}
+LastQueueMessages = LastQueueMessages or {}
 
 local function RemoveFromQueue(src)
     for i = #Queue, 1, -1 do
@@ -13,7 +13,6 @@ local function RemoveFromQueue(src)
             print(string.format("^1Removing Player from Queue: %s | Position: %d/%d^7", Queue[i].name, i, #Queue))
             table.remove(Queue, i)
             UpdateQueuePositions()
-            CheckQueue()
             return true
         end
     end
@@ -33,52 +32,45 @@ local function CheckQueue()
     end
 
     if not GetPlayerName(player.source) then
-        print(string.format("^1Player %s disconnected before processing | Removing from queue^7", player.name))
+        print(string.format("^1[Queue] Player %s disconnected before processing | Removing from queue^7", player.name))
         RemoveFromQueue(player.source)
         IsProcessingQueue = false
-        CheckQueue()
-        return
+        Wait(1000)
+        return CheckQueue()
     end
 
     local elapsedTime = GetGameTimer() - player.startTime
+    if elapsedTime < MinimumQueueWait then
+        Wait(MinimumQueueWait - elapsedTime)
+    end
 
-    CreateThread(function()
-        if not GetPlayerName(player.source) then
-            print(string.format("^1Player %s disconnected during wait | Removing from queue^7", player.name))
-            RemoveFromQueue(player.source)
-            IsProcessingQueue = false
-            CheckQueue()
-            return
+    local maxClients = Config.MaxSlots
+    local currentPlayerCount = GetNumPlayerIndices()
+
+    if not player.rank.reserved and currentPlayerCount >= maxClients then
+        if not LastQueueWarnings[player.source] then
+            print(string.format("^1[Queue] Regular player %s blocked, server full^7", player.name))
+            LastQueueWarnings[player.source] = true
         end
-
-        if elapsedTime < MinimumQueueWait then
-            Wait(MinimumQueueWait - elapsedTime)
-        end
-
-        PlayerCount = GetNumPlayerIndices()
-        local maxClients = GetConvarInt('sv_maxclients', Config.MaxSlots)
-
-        if PlayerCount < maxClients or (player.rank.reserved == true) then
-            RemoveFromQueue(player.source)
-
-            player.deferrals.update(Config.ConnectingMessage)
-            Wait(Config.ConnectMessageLength or 4000)
-            player.deferrals.done()
-            PlayerCount = PlayerCount + 1
-
-            print(string.format("^2Player Connecting: %s | Discord Rank: %s | Reserved: %s^7", player.name, player.rank.id, tostring(player.rank.reserved)))
-        else
-            local queueMessage = string.format("^3Player %s is waiting | Position: %d/%d^7", player.name, 1, #Queue)
-
-            if LastQueueMessages[player.source] ~= queueMessage then
-                print(queueMessage)
-                LastQueueMessages[player.source] = queueMessage
-            end
-        end
-
         IsProcessingQueue = false
-        CheckQueue()
-    end)
+        Wait(1000)
+        return CheckQueue()
+    else
+        LastQueueWarnings[player.source] = nil
+    end
+
+    RemoveFromQueue(player.source)
+
+    player.deferrals.update(Config.ConnectingMessage)
+    Wait(Config.ConnectMessageLength)
+    player.deferrals.done()
+
+    print(string.format("^2[Queue] Player Connecting: %s | Discord Rank: %s | Reserved: %s^7", 
+        player.name, player.rank.id, tostring(player.rank.reserved)))
+
+    IsProcessingQueue = false
+    Wait(1000)
+    CheckQueue()
 end
 
 local function FormatWaitTime(startTime)
@@ -99,8 +91,13 @@ end)
 function UpdateQueuePositions()
     local queueState = {}
 
-    for i, player in ipairs(Queue) do
-        if GetPlayerName(player.source) then
+    for i = #Queue, 1, -1 do
+        local player = Queue[i]
+
+        if not GetPlayerName(player.source) then
+            print(string.format("^1[Queue] Removing Disconnected Player: %s (Discord ID: %s) from Queue^7", player.name, player.discordID))
+            table.remove(Queue, i)
+        else
             local position = i
             local minutes, seconds = FormatWaitTime(player.startTime)
 
@@ -112,14 +109,12 @@ function UpdateQueuePositions()
             player.deferrals.update(string.format(message, position, #Queue, minutes, seconds))
 
             table.insert(queueState, string.format("Position %d: %s | Power: %d", position, player.name, player.rank.power))
-        else
-            table.remove(Queue, i)
         end
     end
 
     local newQueueState = table.concat(queueState, "\n")
     if newQueueState ~= lastLoggedQueueState then
-        print("^3Updated Queue Order:^7")
+        print("^3[Queue] Updated Queue Order:^7")
         print(newQueueState)
         lastLoggedQueueState = newQueueState
     end
@@ -299,7 +294,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
             return
         end
 
-        local maxClients = GetConvarInt('sv_maxclients', Config.MaxSlots)
+        local maxClients = Config.MaxSlots
         local playerCount = GetNumPlayerIndices()
 
         if playerCount < maxClients or (playerRank and playerRank.reserved == true) then
@@ -311,7 +306,14 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
         end
 
         if GracePlayers[discordID] then
-            table.insert(Queue, 1, {
+            local graceIndex = 1
+            for i, queuedPlayer in ipairs(Queue) do
+                if not GracePlayers[queuedPlayer.discordID] then
+                    break
+                end
+                graceIndex = i + 1
+            end
+            table.insert(Queue, graceIndex, {
                 source = src,
                 name = name,
                 deferrals = deferrals,
@@ -357,11 +359,10 @@ AddEventHandler('playerDropped', function(reason)
 
     if discordID then
         GracePlayers[discordID] = GetGameTimer() + Config.GracePeriod
-        print(string.format("^1Player Disconnected: %s | Grace Period Started | Removed from Queue: %s^7", discordID, tostring(removed)))
+        print(string.format("^1[Queue] Player Disconnected: %s | Grace Period Started | Removed from Queue: %s^7", discordID, tostring(removed)))
     end
 
     PlayerCount = GetNumPlayerIndices()
-
     UpdateQueuePositions()
     CheckQueue()
 end)
@@ -372,7 +373,7 @@ CreateThread(function()
         for discordID, expiration in pairs(GracePlayers) do
             if GetGameTimer() >= expiration then
                 GracePlayers[discordID] = nil
-                print(string.format("^1Grace Period Expired: Discord ID: %s^7", discordID))
+                print(string.format("^1[Queue] Grace Period Expired: Discord ID: %s^7", discordID))
             end
         end
     end
