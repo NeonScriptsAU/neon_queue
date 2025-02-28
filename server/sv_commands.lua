@@ -13,9 +13,16 @@ RegisterCommand("force_push", function(source, args, rawCommand)
         return
     end
 
+    if IsProcessingQueue then
+        print("^1Queue is currently processing, try again shortly.^7")
+        return
+    end
+    IsProcessingQueue = true
+
     local player = Queue[position]
     if not player then
         print(string.format("^1No player found at position %d in the queue.^7", position))
+        IsProcessingQueue = false
         return
     end
 
@@ -32,7 +39,11 @@ RegisterCommand("force_push", function(source, args, rawCommand)
         print(string.format("^1Player at position %d had no deferrals.^7", position))
     end
 
+    Wait(1000)
+
     UpdateQueuePositions()
 
     print("^3Updated Queue: ^7", json.encode(Queue))
+    
+    IsProcessingQueue = false
 end, true)

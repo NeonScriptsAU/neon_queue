@@ -364,8 +364,12 @@ AddEventHandler('playerDropped', function(reason)
 
     PlayerCount = GetNumPlayerIndices()
     UpdateQueuePositions()
-    CheckQueue()
+
+    if not IsProcessingQueue then
+        CheckQueue()
+    end
 end)
+
 
 CreateThread(function()
     while true do
@@ -378,3 +382,12 @@ CreateThread(function()
         end
     end
 end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= "hardcap" then return end
+    StopResource(resourceName)
+end)
+
+if GetResourceState('hardcap') == 'started' then
+    StopResource('hardcap')
+end
